@@ -1,0 +1,61 @@
+package com.example.seguimientosemanal
+
+import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
+import android.os.Bundle
+import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import com.example.seguimientosemanal.databinding.ActivityMainBinding
+import kotlinx.coroutines.launch
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var viewModel: MainViewModel
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
+
+        binding.btnRegistrar.setOnClickListener {
+            val dato = binding.etDato.text.toString().toFloat()
+            viewModel.guardarDato(dato)
+        }
+
+        binding.btnMostrarMedias.setOnClickListener {
+            lifecycleScope.launch {
+                val medias = viewModel.obtenerMedias()
+                binding.tvMedias.text = medias.joinToString("\n")
+            }
+        }
+    }
+}
+
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val sharedPreferences: SharedPreferences =
+        application.getSharedPreferences("seguimiento_semanal", Context.MODE_PRIVATE)
+
+    val medias = mutableListOf<Float>()
+
+    fun guardarDato(dato: Float) {
+        medias.add(dato)
+
+        val editor = sharedPreferences.edit()
+        editor.putFloat("media_semanal", medias.average())
+        editor.apply()
+    }
+
+    fun obtenerMedias(): List<String> {
+        val mediaSemanal = sharedPreferences.getFloat("media_semanal", 0f)
+        return medias.map {
+            "Semana ${medias.size}: ${it.round(2)} (media: ${mediaSemanal.round(2)})"
+        }
+    }
+}
